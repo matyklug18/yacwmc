@@ -19,6 +19,16 @@
 #define HEIGHT DisplayHeight( d, DefaultScreen(d) )
 #define DIMS WIDTH, HEIGHT, DEPTH
 
+void recurse(Tree tree, Window w) {
+	if(!oaqšašvžřtree.a.isLeaf()) {
+		tree.a = Tree
+	}
+}
+
+void treefy(Window win) {
+	
+}
+
 void damageAll() {
 	Window root, parent, *children;
 	uint children_count;
@@ -40,12 +50,21 @@ void paint() {
 	XQueryTree(d, DefaultRootWindow(d), &root, &parent, &children, &children_count);
 
 	XRenderColor color;
-	color.alpha = 1;
-	color.red = 1;
-	color.green = 1;
-	color.blue = 1;
+	color.alpha = 50000;
+	color.red = 0;
+	color.green = 20000;
+	color.blue = 40000;
 
-	XRenderFillRectangle(d, PictOpSrc, mBackbuffer, &color, 0, 0, WIDTH, HEIGHT);
+	XRenderFillRectangle(d, PictOpSrc, mBackbuffer, &color,
+		0, 0, WIDTH, HEIGHT);
+
+	XRenderColor color2;
+	color2.alpha = 50000;
+	color2.red = 0;
+	color2.green = 25000;
+	color2.blue = 50000;
+
+	XRenderFillRectangle(d, PictOpSrc, mBackbuffer, &color2, WIDTH / 2 - 50, HEIGHT / 2 - 50, 50, 50);
 
 	for (uint i = 1; i < children_count; i++) {
 		
@@ -57,18 +76,32 @@ void paint() {
 		Pixmap pictMap = XCompositeNameWindowPixmap( d, children[i] );
 
 		Picture picture = XRenderCreatePicture(d, pictMap, mFormat, 0, 0);
-		
-		
-		XRenderComposite (d, PictOpSrc,
+
+		XRenderColor borderC;
+		borderC.alpha = 0;
+		borderC.red = 0;
+		borderC.green = 5000;
+		borderC.blue = 5000;
+
+		XRenderComposite (d, PictOpOver,
 			picture, None, mBackbuffer,
-			0, 0, 0, 0, theAttr.x, theAttr.y, theAttr.width, theAttr.height);			
+			0, 0, 0, 0,
+			theAttr.x, theAttr.y, theAttr.width, theAttr.height);
+
+		if(children[i] == focus) {
+			XRenderFillRectangle(d, PictOpOver, mBackbuffer, &borderC, 
+				theAttr.x, theAttr.y-5, theAttr.width, 5);
+		}
 	}
 
 	XRenderComposite (d, PictOpSrc,
 		mBackbuffer, None, mFrontbuffer,
-		0, 0, 0, 0, 0, 0, WIDTH, HEIGHT);
+		0, 0, 0, 0, 
+		0, 0, WIDTH, HEIGHT);
 
 }
+
+
 
 int main () {
 	d = XOpenDisplay(nullptr);
@@ -119,6 +152,16 @@ int main () {
 	XButtonEvent start;
 	XWindowAttributes attr;
 
+	Window w = XCreateSimpleWindow (d, DefaultRootWindow(d), 0, 0, 1, 1, 0, None,
+			     None);
+
+    Xutf8SetWMProperties (d, w, "xcompmgr", "xcompmgr", NULL, 0, NULL, NULL,
+			  NULL);
+
+	Atom a = XInternAtom (d, "_NET_WM_CM_S0", False);
+
+    XSetSelectionOwner (d, a, w, 0);
+
 	damageAll();
 	paint();
 
@@ -133,9 +176,11 @@ int main () {
 			start = e.xbutton;
 			XRaiseWindow(d, e.xbutton.subwindow);
 			XSetInputFocus(d, e.xbutton.subwindow, 0, 0);
+			focus = e.xbutton.subwindow;
 		}
 		else if(e.type == MotionNotify && start.subwindow != None)
 		{
+/*
 			int xdiff = e.xbutton.x_root - start.x_root;
 			int ydiff = e.xbutton.y_root - start.y_root;
 			XMoveResizeWindow(d, start.subwindow,
@@ -143,10 +188,15 @@ int main () {
 					attr.y + (start.button==1 ? ydiff : 0),
 					MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
 					MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
+*/
 		}
 		else if(e.type == CreateNotify) {
 			XCreateWindowEvent ev = e.xcreatewindow;
 			damage(ev.window);
+		}
+		else if(e.type == MapRequest) {
+			XMapRequestEvent ev = e.xmaprequest;
+			treefy(ev.window);
 		}
 		else if(e.type == ButtonRelease)
 			start.subwindow = None;
