@@ -1,13 +1,7 @@
 
-<<<<<<< HEAD
 #include <memory>
 #include <exception>
 #include <future>
-=======
-#include <iostream>
-#include <memory>
-#include <exception>
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 
 #include <X11/extensions/Xcomposite.h>
 #include <X11/Xutil.h>
@@ -15,10 +9,6 @@
 #include <X11/extensions/Xrender.h>
 #include <X11/extensions/Xdamage.h>
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 #include "main.hpp"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -28,7 +18,6 @@
 #define HEIGHT DisplayHeight( d, DefaultScreen(d) )
 #define DIMS WIDTH, HEIGHT, DEPTH
 
-<<<<<<< HEAD
 Tree* recFindTree(Tree* tr, Window w) {
 	if(tr->isLeaf() && tr->win == w) {
 		return tr;
@@ -78,16 +67,6 @@ void makeTree(Window win) {
 void treefy(Window win) {
 	makeTree(win);
 	mapAll();
-=======
-void recurse(Tree tree, Window w) {
-	if(!oaqšašvžřtree.a.isLeaf()) {
-		tree.a = Tree
-	}
-}
-
-void treefy(Window win) {
-	
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 }
 
 void damageAll() {
@@ -162,21 +141,12 @@ void paint() {
 
 }
 
-<<<<<<< HEAD
 int main () {
 	currTree = &tree;
 
 	d = XOpenDisplay(nullptr);
 
 	XSetErrorHandler([](Display* display, XErrorEvent* e) -> int {/* std::cout << (int)e->error_code << std::endl; /**/ return 0;});
-=======
-
-
-int main () {
-	d = XOpenDisplay(nullptr);
-
-	XSetErrorHandler([](Display* display, XErrorEvent* e) -> int { std::cout << (int)e->error_code << std::endl; return 0; });
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 
 	int version = XCompositeVersion();
 	int major = version / 1000;
@@ -187,7 +157,6 @@ int main () {
 
 	XCompositeQueryVersion(d, &major, &minor);
 
-<<<<<<< HEAD
     XGrabKey(d, XKeysymToKeycode(d, XStringToKeysym("Return")), Mod1Mask|Mod2Mask,
             DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
 
@@ -197,8 +166,6 @@ int main () {
 	XGrabKey(d, XKeysymToKeycode(d, XStringToKeysym("V")), Mod1Mask|Mod2Mask,
         	DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
 
-=======
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 	XGrabButton(d, 1, Mod1Mask|Mod2Mask, DefaultRootWindow(d), True,
 					ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 	XGrabButton(d, 3, Mod1Mask|Mod2Mask, DefaultRootWindow(d), True,
@@ -213,13 +180,9 @@ int main () {
 
 	XSelectInput( d, DefaultRootWindow(d),
 			SubstructureNotifyMask | ExposureMask |
-<<<<<<< HEAD
 			StructureNotifyMask | PropertyChangeMask |
 			SubstructureRedirectMask
 	);
-=======
-			StructureNotifyMask | PropertyChangeMask );
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 
 	XUngrabServer( d );
 
@@ -258,7 +221,6 @@ int main () {
 		XEvent e;
 		XNextEvent(d, &e);
 
-<<<<<<< HEAD
 		if(e.type == KeyPress) {
 			XKeyPressedEvent ev = e.xkey;
 			if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("Return")))
@@ -270,16 +232,12 @@ int main () {
 			}
 		}
 		else if(e.type == ButtonPress && e.xbutton.subwindow != None)
-=======
-		if(e.type == ButtonPress && e.xbutton.subwindow != None)
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 		{
 			XGetWindowAttributes(d, e.xbutton.subwindow, &attr);
 			start = e.xbutton;
 			XRaiseWindow(d, e.xbutton.subwindow);
 			XSetInputFocus(d, e.xbutton.subwindow, 0, 0);
 			focus = e.xbutton.subwindow;
-<<<<<<< HEAD
 			
 			Tree* focused = findTree(focus);
 			currTree = focused;
@@ -288,12 +246,6 @@ int main () {
 		}
 		else if(e.type == MotionNotify && start.subwindow != None)
 		{
-=======
-		}
-		else if(e.type == MotionNotify && start.subwindow != None)
-		{
-/*
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 			int xdiff = e.xbutton.x_root - start.x_root;
 			int ydiff = e.xbutton.y_root - start.y_root;
 			XMoveResizeWindow(d, start.subwindow,
@@ -301,10 +253,6 @@ int main () {
 					attr.y + (start.button==1 ? ydiff : 0),
 					MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
 					MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
-<<<<<<< HEAD
-=======
-*/
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 		}
 		else if(e.type == CreateNotify) {
 			XCreateWindowEvent ev = e.xcreatewindow;
@@ -312,10 +260,7 @@ int main () {
 		}
 		else if(e.type == MapRequest) {
 			XMapRequestEvent ev = e.xmaprequest;
-<<<<<<< HEAD
 			XMapWindow(d, ev.window);
-=======
->>>>>>> 5c6ae9108f63bdb7c6c9b798c3b403ab57ae6de6
 			treefy(ev.window);
 		}
 		else if(e.type == ButtonRelease)
