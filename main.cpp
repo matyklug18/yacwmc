@@ -18,6 +18,53 @@
 #define HEIGHT DisplayHeight( d, DefaultScreen(d) )
 #define DIMS WIDTH, HEIGHT, DEPTH
 
+void printTree(Tree tre, int lvl) {
+	if(tre.isLeaf()) {
+		for(int i = 0; i < lvl-1; i++) {
+			for(int i = 0; i < lvl-1; i++) {
+				std::cout << "  ";
+			}
+			std::cout << "|-|" << std::endl;
+		}
+		for(int i = 0; i < lvl; i++) {
+			std::cout << "  ";
+		}
+		std::cout << "||-" << tre.win << std::endl;
+	}
+	for(int i = 0; i < tre.children.size(); i++) {
+		Tree ch = tre.children.at(i);
+		printTree(ch, lvl + 1);
+	}
+}
+
+void printRoot() {
+	std::cout<<"root"<<std::endl;
+	printTree(tree, 0);
+	std::cout<<std::endl;
+}
+
+Tree* recurseParent(Tree* parent, Tree* child) {
+	if(!parent->isEmpty()) {
+		for(int i = 0; i < parent->children.size(); i++) {
+			Tree* ch = &parent->children.at(i);
+			if(ch == child) {
+				return parent;
+			} else {
+				Tree* tr = recurseParent(ch, child);
+				if(tr) {
+					return tr;
+				}
+			}
+		}
+	}
+	return nullptr;
+}
+
+Tree* findParent(Tree* child) {
+	Tree* rt = recurseParent(&tree, child);
+	return rt;
+}
+
 Tree* recFindTree(Tree* tr, Window w) {
 	if(tr->isLeaf() && tr->win == w) {
 		return tr;
@@ -40,15 +87,14 @@ Tree* findTree(Window w) {
 
 void recurseMap(Tree tr, int x, int y, int w, int h) {
 	if(tr.isLeaf()) {
-		XMoveResizeWindow(d, tr.win, x, y, w, h);
+		XMoveResizeWindow(d, tr.win, x+2, y+2, w-4, h-4);
 	} else {
 		for(int i = 0; i < tr.children.size(); i++) {
 			Tree ch = tr.children.at(i);
-			if(tr.split == false) {
-				recurseMap(ch, i * (w / tr.children.size()), y, w / tr.children.size(), h);
-			}
-			else if(tr.split == true) {
-				recurseMap(ch, x, i * (h / tr.children.size()), w, h / tr.children.size());
+			if(tr.split == true) {
+				recurseMap(ch, x, y + i * (h / tr.children.size()), w, h / tr.children.size());
+			} else {
+				recurseMap(ch, x + i * (w / tr.children.size()), y, w / tr.children.size(), h);
 			}
 		}
 	}
@@ -61,7 +107,15 @@ void mapAll() {
 Tree* currTree;
 
 void makeTree(Window win) {
-	currTree->children.push_back(Tree(win));
+	if(focus == 0 || currTree->split == findTree(focus)->split) {
+		currTree->children.push_back(Tree(win));
+	}
+	else {
+		Tree* ttrr = findTree(focus);
+		ttrr->children.push_back(Tree(ttrr->win));
+		ttrr->children.push_back(Tree(win));
+		ttrr->win = 0;
+	}
 }
 
 void treefy(Window win) {
@@ -104,7 +158,7 @@ void paint() {
 	color2.green = 25000;
 	color2.blue = 50000;
 
-	XRenderFillRectangle(d, PictOpSrc, mBackbuffer, &color2, WIDTH / 2 - 50, HEIGHT / 2 - 50, 50, 50);
+	XRenderFillRectangle(d, PictOpSrc, mBackbuffer, &color2, WIDTH / 2 - 50, HEIGHT / 2 - 50, 100, 100);
 
 	for (uint i = 1; i < children_count; i++) {
 		
@@ -118,7 +172,7 @@ void paint() {
 		Picture picture = XRenderCreatePicture(d, pictMap, mFormat, 0, 0);
 
 		XRenderColor borderC;
-		borderC.alpha = 0;
+		borderC.alpha = 5000;
 		borderC.red = 0;
 		borderC.green = 5000;
 		borderC.blue = 5000;
@@ -127,11 +181,6 @@ void paint() {
 			picture, None, mBackbuffer,
 			0, 0, 0, 0,
 			theAttr.x, theAttr.y, theAttr.width, theAttr.height);
-
-		if(children[i] == focus) {
-			XRenderFillRectangle(d, PictOpOver, mBackbuffer, &borderC, 
-				theAttr.x, theAttr.y-5, theAttr.width, 5);
-		}
 	}
 
 	XRenderComposite (d, PictOpSrc,
@@ -139,6 +188,12 @@ void paint() {
 		0, 0, 0, 0, 
 		0, 0, WIDTH, HEIGHT);
 
+}
+
+void removeWindow(Window win) {
+	currTree->remChild(win);
+	mapAll();
+	paint();
 }
 
 int main () {
@@ -164,6 +219,9 @@ int main () {
         	DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
 
 	XGrabKey(d, XKeysymToKeycode(d, XStringToKeysym("V")), Mod1Mask|Mod2Mask,
+        	DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
+
+	XGrabKey(d, XKeysymToKeycode(d, XStringToKeysym("Q")), Mod1Mask|Mod2Mask,
         	DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
 
 	XGrabButton(d, 1, Mod1Mask|Mod2Mask, DefaultRootWindow(d), True,
@@ -223,12 +281,28 @@ int main () {
 
 		if(e.type == KeyPress) {
 			XKeyPressedEvent ev = e.xkey;
-			if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("Return")))
+			if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("Return"))) {
 				std::async(std::launch::async, [] () {system("bash -c \"kitty &\"");});
-			else if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("H")) && focus != 0) {
-				findTree(focus)->split = true;
-			} else if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("V")) && focus != 0) {
-				findTree(focus)->split = false;
+			}
+			else if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("H"))) {
+				if(focus != 0) {
+					findTree(focus)->split = true;
+				}
+				else {
+					tree.split = true;
+				}
+			} else if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("V"))) {
+				if(focus != 0) {
+					findTree(focus)->split = false;
+				}
+				else {
+					tree.split = false;
+				}
+			} else if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("Q"))) {
+				if(focus != 0) {
+					XUnmapWindow(d, focus);
+					focus = 0;
+				}
 			}
 		}
 		else if(e.type == ButtonPress && e.xbutton.subwindow != None)
@@ -237,22 +311,21 @@ int main () {
 			start = e.xbutton;
 			XRaiseWindow(d, e.xbutton.subwindow);
 			XSetInputFocus(d, e.xbutton.subwindow, 0, 0);
-			focus = e.xbutton.subwindow;
 			
+			focus = e.xbutton.subwindow;
 			Tree* focused = findTree(focus);
-			currTree = focused;
-			focused->children.push_back(Tree(focused->win));
-			focused->win = 0;
+			currTree = findParent(focused);
 		}
 		else if(e.type == MotionNotify && start.subwindow != None)
 		{
 			int xdiff = e.xbutton.x_root - start.x_root;
 			int ydiff = e.xbutton.y_root - start.y_root;
-			XMoveResizeWindow(d, start.subwindow,
-					attr.x + (start.button==1 ? xdiff : 0),
-					attr.y + (start.button==1 ? ydiff : 0),
-					MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
-					MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
+			if(!findTree(start.subwindow))
+				XMoveResizeWindow(d, start.subwindow,
+						attr.x + (start.button==1 ? xdiff : 0),
+						attr.y + (start.button==1 ? ydiff : 0),
+						MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
+						MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
 		}
 		else if(e.type == CreateNotify) {
 			XCreateWindowEvent ev = e.xcreatewindow;
@@ -269,6 +342,9 @@ int main () {
 			paint();
 			XDamageNotifyEvent *ev = reinterpret_cast<XDamageNotifyEvent*>( &e );
         	XDamageSubtract( d, ev->damage, None, None );
-    	}
+    	} else if(e.type == UnmapNotify) {
+			XUnmapEvent ev = e.xunmap;
+			removeWindow(ev.window);
+		}
 	}
 }
