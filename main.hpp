@@ -27,12 +27,14 @@ class Tree {
             return !isLeaf() && children.size() == 0;
         }
 
-        void remChild(Window w) {
+        bool remChild(Window w) {
             for(int i = 0; i < children.size(); i++) {
                 if(children.at(i).win == w) {
                     children.erase(children.begin() + i);
+                    return true;
                 }
             }
+            return false;
         }
 
         void remChild(Tree* trp) {

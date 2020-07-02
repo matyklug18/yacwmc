@@ -17,6 +17,8 @@
 #define WIDTH DisplayWidth( d, DefaultScreen(d) )
 #define HEIGHT DisplayHeight( d, DefaultScreen(d) )
 #define DIMS WIDTH, HEIGHT, DEPTH
+#define KEY(k) XKeysymToKeycode(d, XStringToKeysym(k))
+
 
 void printTree(Tree tre, int lvl) {
 	if(tre.isLeaf()) {
@@ -190,10 +192,32 @@ void paint() {
 
 }
 
-void removeWindow(Window win) {
-	currTree->remChild(win);
-	mapAll();
-	paint();
+bool removeWindow(Tree* tr, Window win) {
+	bool ret = tr->remChild(win);
+	if(ret) {
+		Tree* par = findParent(tr);
+		if(par && tr->children.size() == 0) {
+			par->remChild(tr);
+		}
+		mapAll();
+		paint();
+		focus = 0;
+		if(par) {
+			currTree = par;
+		} else {
+			currTree = &tree;
+		}
+	}
+	return ret;
+}
+
+void remWin(Tree* tre, Window win) {
+	if(!removeWindow(tre, win)) {
+		for(int i = 0; i < tre->children.size(); i++) {
+			Tree* ch = &tre->children.at(i);
+			remWin(ch, win);
+		}
+	}
 }
 
 int main () {
@@ -212,16 +236,16 @@ int main () {
 
 	XCompositeQueryVersion(d, &major, &minor);
 
-    XGrabKey(d, XKeysymToKeycode(d, XStringToKeysym("Return")), Mod1Mask|Mod2Mask,
+    XGrabKey(d, KEY("Return"), Mod1Mask|Mod2Mask,
             DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
 
-	XGrabKey(d, XKeysymToKeycode(d, XStringToKeysym("H")), Mod1Mask|Mod2Mask,
+	XGrabKey(d, KEY("H"), Mod1Mask|Mod2Mask,
         	DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
 
-	XGrabKey(d, XKeysymToKeycode(d, XStringToKeysym("V")), Mod1Mask|Mod2Mask,
+	XGrabKey(d, KEY("V"), Mod1Mask|Mod2Mask,
         	DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
 
-	XGrabKey(d, XKeysymToKeycode(d, XStringToKeysym("Q")), Mod1Mask|Mod2Mask,
+	XGrabKey(d, KEY("Q"), Mod1Mask|Mod2Mask,
         	DefaultRootWindow(d), True, GrabModeAsync, GrabModeAsync);
 
 	XGrabButton(d, 1, Mod1Mask|Mod2Mask, DefaultRootWindow(d), True,
@@ -281,27 +305,26 @@ int main () {
 
 		if(e.type == KeyPress) {
 			XKeyPressedEvent ev = e.xkey;
-			if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("Return"))) {
+			if(ev.keycode == KEY("Return")) {
 				std::async(std::launch::async, [] () {system("bash -c \"kitty &\"");});
 			}
-			else if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("H"))) {
+			else if(ev.keycode == KEY("H")) {
 				if(focus != 0) {
 					findTree(focus)->split = true;
 				}
 				else {
 					tree.split = true;
 				}
-			} else if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("V"))) {
+			} else if(ev.keycode == KEY("V")) {
 				if(focus != 0) {
 					findTree(focus)->split = false;
 				}
 				else {
 					tree.split = false;
 				}
-			} else if(ev.keycode == XKeysymToKeycode(d, XStringToKeysym("Q"))) {
+			} else if(ev.keycode == KEY("Q")) {
 				if(focus != 0) {
 					XUnmapWindow(d, focus);
-					focus = 0;
 				}
 			}
 		}
@@ -310,7 +333,7 @@ int main () {
 			XGetWindowAttributes(d, e.xbutton.subwindow, &attr);
 			start = e.xbutton;
 			XRaiseWindow(d, e.xbutton.subwindow);
-			XSetInputFocus(d, e.xbutton.subwindow, 0, 0);
+			XSetInputFocus(d, e.xbutton.subwindow, RevertToParent, 0);
 			
 			focus = e.xbutton.subwindow;
 			Tree* focused = findTree(focus);
@@ -336,15 +359,16 @@ int main () {
 			XMapWindow(d, ev.window);
 			treefy(ev.window);
 		}
-		else if(e.type == ButtonRelease)
+		else if(e.type == ButtonRelease) {
 			start.subwindow = None;
+		}
 		else if ( e.type == damage_event + XDamageNotify ) {
 			paint();
 			XDamageNotifyEvent *ev = reinterpret_cast<XDamageNotifyEvent*>( &e );
         	XDamageSubtract( d, ev->damage, None, None );
     	} else if(e.type == UnmapNotify) {
 			XUnmapEvent ev = e.xunmap;
-			removeWindow(ev.window);
+			remWin(&tree, ev.window);
 		}
 	}
 }
